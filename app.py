@@ -61,6 +61,16 @@ def webhook():
                 tag = release.get("tag_name", "-")
                 name = release.get("name", "-")
                 body = release.get("body", "Tidak ada changelog.").strip()
+                # Hapus baris Full Changelog
+                lines = [l for l in body.splitlines() if not l.strip().startswith("Full Changelog")]
+                # Convert markdown ### ke bold Telegram
+                converted = []
+                for l in lines:
+                    if l.startswith("### "):
+                        converted.append(f"*{l[4:]}*")
+                    else:
+                        converted.append(l)
+                body = "\n".join(converted).strip()
                 text = f"📦 *{name}* (`{tag}`)\n\n{body}\n\n📲 Download: https://aniku-downloads.vercel.app/"
             else:
                 text = "❌ Gagal ambil data release."
