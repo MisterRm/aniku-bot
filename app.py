@@ -62,7 +62,7 @@ def webhook():
                 name = release.get("name", "-")
                 body = release.get("body", "Tidak ada changelog.").strip()
                 # Hapus baris Full Changelog
-                lines = [l for l in body.splitlines() if not l.strip().startswith("Full Changelog")]
+                lines = [l for l in body.splitlines() if "Full Changelog" not in l and "github.com" not in l]
                 # Convert markdown ### ke bold Telegram
                 converted = []
                 for l in lines:
