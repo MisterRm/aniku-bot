@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import requests
 import os
 
@@ -7,16 +7,13 @@ app = Flask(__name__)
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GITHUB_REPO = "RMBLOGG/aniku-app"
 BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-def send_message(chat_id, text, reply_markup=None):
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "Markdown"
-    }
+def send_telegram(chat_id, text, reply_markup=None):
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    requests.post(f"{BASE_URL}/sendMessage", json=payload)
+    return requests.post(f"{BASE_URL}/sendMessage", json=payload)
 
 def get_latest_release():
     res = requests.get(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest")
@@ -53,6 +50,9 @@ def clean_body(body):
         result.pop()
     return "\n".join(result)
 
+def answer_callback(callback_query_id):
+    requests.post(f"{BASE_URL}/answerCallbackQuery", json={"callback_query_id": callback_query_id})
+
 def main_menu(chat_id):
     text = "🎌 *Aniku — Bot Resmi*\n\nInfo rilis, versi, & download ada di sini."
     reply_markup = {
@@ -61,15 +61,10 @@ def main_menu(chat_id):
                 {"text": "📦 Versi Terbaru", "callback_data": "latest"},
                 {"text": "📋 Semua Versi", "callback_data": "versions"}
             ],
-            [
-                {"text": "📲 Download", "callback_data": "download"}
-            ]
+            [{"text": "📲 Download", "callback_data": "download"}]
         ]
     }
-    send_message(chat_id, text, reply_markup)
-
-def answer_callback(callback_query_id):
-    requests.post(f"{BASE_URL}/answerCallbackQuery", json={"callback_query_id": callback_query_id})
+    send_telegram(chat_id, text, reply_markup)
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -86,17 +81,13 @@ def webhook():
             if release:
                 tag = release.get("tag_name", "-")
                 name = release.get("name", "-")
-                body = release.get("body", "").strip()
-                body = clean_body(body)
+                body = clean_body(release.get("body", "").strip())
                 assets = release.get("assets", [])
                 dl_count = assets[0].get("download_count", 0) if assets else 0
                 text = f"📦 *{name}* (`{tag}`)\n\n{body}\n\n📥 Download: {dl_count}x\n📲 https://aniku-downloads.vercel.app/"
             else:
                 text = "Gagal ambil data release."
-            reply_markup = {
-                "inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]
-            }
-            send_message(chat_id, text, reply_markup)
+            send_telegram(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]})
 
         elif action == "versions":
             releases = get_all_releases()
@@ -111,17 +102,11 @@ def webhook():
                 text = "📋 *Semua Versi Aniku:*\n\n" + "\n".join(lines)
             else:
                 text = "Gagal ambil data versi."
-            reply_markup = {
-                "inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]
-            }
-            send_message(chat_id, text, reply_markup)
+            send_telegram(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]})
 
         elif action == "download":
             text = "📲 *Download Aniku*\n\nhttps://aniku-downloads.vercel.app/"
-            reply_markup = {
-                "inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]
-            }
-            send_message(chat_id, text, reply_markup)
+            send_telegram(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]})
 
         elif action == "menu":
             main_menu(chat_id)
@@ -134,6 +119,22 @@ def webhook():
             main_menu(chat_id)
 
     return jsonify({"ok": True})
+
+@app.route("/send", methods=["POST"])
+def send_to_channel():
+    data = request.json
+    msg = data.get("message", "").strip()
+    if not msg:
+        return jsonify({"ok": False, "error": "Empty message"})
+    if not CHAT_ID:
+        return jsonify({"ok": False, "error": "TELEGRAM_CHAT_ID not set"})
+    res = send_telegram(CHAT_ID, msg)
+    result = res.json()
+    return jsonify({"ok": result.get("ok", False)})
+
+@app.route("/admin")
+def admin():
+    return send_file("admin.html")
 
 @app.route("/")
 def index():

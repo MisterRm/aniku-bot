@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aniku Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #17171f;
+    --border: #252530;
+    --accent: #7c6aff;
+    --accent-dim: rgba(124,106,255,0.12);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+
+  header span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  main { padding: 24px; max-width: 960px; margin: 0 auto; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .section-body { padding: 20px; }
+
+  canvas { max-height: 200px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0 0 10px;
+    font-weight: 500;
+  }
+  td {
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  td:last-child { text-align: right; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .badge-latest { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-pre { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-draft { background: rgba(107,107,128,0.15); color: var(--muted); }
+  .badge-normal { background: var(--accent-dim); color: var(--accent); }
+
+  .version-name { font-weight: 600; margin-bottom: 2px; }
+  .version-date { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .version-size { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .version-dl { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--mono);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 12px;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  .preview-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    min-height: 60px;
+    color: var(--text);
+    white-space: pre-wrap;
+    font-family: var(--mono);
+    margin-top: 12px;
+  }
+
+  .send-btn {
+    margin-top: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .log-item {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-time { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; margin-top: 2px; }
+  .log-msg { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 20px 0; }
+  .loading { color: var(--muted); font-size: 12px; font-family: var(--mono); padding: 20px; text-align: center; }
+
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    main { padding: 16px; }
+    table { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎌 Aniku Admin</h1>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <span id="last-updated">—</span>
+    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+</header>
+
+<main>
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Download</div>
+      <div class="stat-value" id="total-dl">—</div>
+      <div class="stat-sub">semua versi</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Versi Terbaru</div>
+      <div class="stat-value" id="latest-ver" style="font-size:18px;margin-top:4px;">—</div>
+      <div class="stat-sub" id="latest-date">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Rilis</div>
+      <div class="stat-value" id="total-releases">—</div>
+      <div class="stat-sub">versi dirilis</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section">
+    <div class="section-header">Download per Versi</div>
+    <div class="section-body">
+      <canvas id="dlChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Release Table -->
+  <div class="section">
+    <div class="section-header">Semua Rilis</div>
+    <div class="section-body" style="padding:0 20px;">
+      <div id="releases-loading" class="loading">Memuat data...</div>
+      <table id="releases-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Versi</th>
+            <th>Status</th>
+            <th>Ukuran</th>
+            <th>Download</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="releases-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Kirim Pesan -->
+  <div class="section">
+    <div class="section-header">Kirim Pesan ke Channel</div>
+    <div class="section-body">
+      <textarea id="msg-input" placeholder="Tulis pesan... (support Markdown Telegram: *bold*, _italic_, `code`)" oninput="updatePreview()"></textarea>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Preview:</div>
+      <div class="preview-box" id="msg-preview">—</div>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">Kirim ke Channel</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="section">
+    <div class="section-header">Log Pesan Terakhir</div>
+    <div class="section-body" id="log-body">
+      <div class="empty">Belum ada log.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = '';
+let chart = null;
+const msgLog = [];
+
+async function loadAll() {
+  document.getElementById('last-updated').textContent = 'Memuat...';
+  try {
+    const res = await fetch('https://api.github.com/repos/RMBLOGG/aniku-app/releases');
+    const releases = await res.json();
+
+    let totalDl = 0;
+    const labels = [];
+    const dlData = [];
+
+    document.getElementById('total-releases').textContent = releases.length;
+
+    if (releases.length > 0) {
+      const latest = releases[0];
+      document.getElementById('latest-ver').textContent = latest.tag_name;
+      document.getElementById('latest-date').textContent = new Date(latest.published_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'});
+    }
+
+    const tbody = document.getElementById('releases-body');
+    tbody.innerHTML = '';
+
+    releases.forEach((r, i) => {
+      const asset = r.assets && r.assets[0];
+      const dl = asset ? asset.download_count : 0;
+      const size = asset ? (asset.size / 1024 / 1024).toFixed(1) + ' MB' : '—';
+      const dlUrl = asset ? asset.browser_download_url : '#';
+      totalDl += dl;
+
+      labels.push(r.tag_name);
+      dlData.push(dl);
+
+      let badgeClass = 'badge-normal';
+      let badgeText = 'Release';
+      if (i === 0) { badgeClass = 'badge-latest'; badgeText = 'Latest'; }
+      if (r.prerelease) { badgeClass = 'badge-pre'; badgeText = 'Pre-release'; }
+      if (r.draft) { badgeClass = 'badge-draft'; badgeText = 'Draft'; }
+
+      const date = new Date(r.published_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'});
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="version-name">${r.name || r.tag_name}</div>
+          <div class="version-date">${date}</div>
+        </td>
+        <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+        <td class="version-size">${size}</td>
+        <td class="version-dl">${dl}x</td>
+        <td>
+          <button class="copy-btn" onclick="copyLink('${dlUrl}', this)">Salin Link</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('total-dl').textContent = totalDl;
+    document.getElementById('releases-loading').style.display = 'none';
+    document.getElementById('releases-table').style.display = 'table';
+
+    // Chart
+    if (chart) chart.destroy();
+    const ctx = document.getElementById('dlChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels.reverse(),
+        datasets: [{
+          label: 'Download',
+          data: dlData.reverse(),
+          backgroundColor: 'rgba(124,106,255,0.5)',
+          borderColor: 'rgba(124,106,255,1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#6b6b80', font: { family: 'JetBrains Mono', size: 11 } }, grid: { color: '#252530' } },
+          y: { ticks: { color: '#6b6b80', font: { family: 'JetBrains Mono', size: 11 } }, grid: { color: '#252530' }, beginAtZero: true }
+        }
+      }
+    });
+
+    document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('id-ID');
+  } catch (e) {
+    document.getElementById('last-updated').textContent = 'Gagal memuat';
+  }
+}
+
+function copyLink(url, btn) {
+  navigator.clipboard.writeText(url);
+  btn.textContent = 'Tersalin!';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Salin Link'; btn.classList.remove('copied'); }, 2000);
+}
+
+function updatePreview() {
+  const val = document.getElementById('msg-input').value;
+  document.getElementById('msg-preview').textContent = val || '—';
+}
+
+async function sendMessage() {
+  const msg = document.getElementById('msg-input').value.trim();
+  if (!msg) return;
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Mengirim...';
+
+  try {
+    const res = await fetch('/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      addLog(msg, true);
+      document.getElementById('msg-input').value = '';
+      document.getElementById('msg-preview').textContent = '—';
+      btn.textContent = 'Terkirim ✓';
+      setTimeout(() => { btn.textContent = 'Kirim ke Channel'; btn.disabled = false; }, 2000);
+    } else {
+      btn.textContent = 'Gagal kirim';
+      setTimeout(() => { btn.textContent = 'Kirim ke Channel'; btn.disabled = false; }, 2000);
+    }
+  } catch {
+    btn.textContent = 'Error';
+    setTimeout(() => { btn.textContent = 'Kirim ke Channel'; btn.disabled = false; }, 2000);
+  }
+}
+
+function addLog(msg, success) {
+  const now = new Date().toLocaleTimeString('id-ID');
+  msgLog.unshift({ msg, time: now, success });
+  renderLog();
+}
+
+function renderLog() {
+  const body = document.getElementById('log-body');
+  if (msgLog.length === 0) {
+    body.innerHTML = '<div class="empty">Belum ada log.</div>';
+    return;
+  }
+  body.innerHTML = msgLog.slice(0, 10).map(l => `
+    <div class="log-item">
+      <div class="log-time">${l.time}</div>
+      <div class="log-msg">${l.msg}</div>
+    </div>
+  `).join('');
+}
+
+loadAll();
+</script>
+</body>
+</html>
