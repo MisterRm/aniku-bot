@@ -54,7 +54,7 @@ def clean_body(body):
     return "\n".join(result)
 
 def main_menu(chat_id):
-    text = "🎌 *Aniku Bot*\n\nMau cari apa?"
+    text = "🎌 *Aniku — Bot Resmi*\n\nInfo rilis, versi, & download ada di sini."
     reply_markup = {
         "inline_keyboard": [
             [
