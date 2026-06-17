@@ -61,7 +61,7 @@ def main_menu(chat_id):
                 {"text": "📦 Versi Terbaru", "callback_data": "latest"},
                 {"text": "📋 Semua Versi", "callback_data": "versions"}
             ],
-            [{"text": "📲 Download", "callback_data": "download"}]
+            [{"text": "📲 Download Langsung", "callback_data": "download_direct"}, {"text": "🌐 Via Website", "callback_data": "download_web"}]
         ]
     }
     send_telegram(chat_id, text, reply_markup)
@@ -104,8 +104,18 @@ def webhook():
                 text = "Gagal ambil data versi."
             send_telegram(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]})
 
-        elif action == "download":
-            text = "📲 *Download Aniku*\n\nhttps://aniku-downloads.vercel.app/"
+        elif action == "download_web":
+            text = "🌐 *Download via Website*\n\nhttps://aniku-downloads.vercel.app/"
+            send_telegram(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]})
+
+        elif action == "download_direct":
+            release = get_latest_release()
+            if release and release.get("assets"):
+                apk_url = release["assets"][0]["browser_download_url"]
+                tag = release.get("tag_name", "-")
+                text = f"📲 *Download Langsung*\n\nVersi: `{tag}`\n{apk_url}"
+            else:
+                text = "Gagal ambil link APK."
             send_telegram(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "menu"}]]})
 
         elif action == "menu":
